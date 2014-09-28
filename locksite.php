@@ -80,7 +80,6 @@ function locksite_admin_page() {
 
 
     print '<form id="form-table" action="admin.php?page=locksite" method="post">';
-    wp_nonce_field('locksite_update_settings');
     $lock_site_table->prepare_items();
     $lock_site_table->display();
     print '<div class="tablenav bottom">';
@@ -97,6 +96,7 @@ function locksite_admin_page() {
         print '<p>IP addresses you add here will have access to your locked sites. Add one IP address per row.</p>';
         print "<p><textarea rows='10' cols='40' name='whitelist'>{$whitelist}</textarea></p>";
         print '<input type="hidden" name="page" value="locksite" />';
+    wp_nonce_field('locksite_update_settings');
         print '<p><input type="submit" class="button apply" name="submit_me" value="Update"/></p>';
     print '</form>';
 
