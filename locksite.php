@@ -47,6 +47,10 @@ function locksite_admin_page() {
         }
         locksite_save_config($new_config);
 
+        $locksite_message = $_POST['locksite_message'];
+        locksite_save_message($locksite_message);
+
+
         $w = explode("\n", $_POST['whitelist']);
         $whitelist = array();
         foreach ($w as $entry) {
@@ -63,9 +67,7 @@ function locksite_admin_page() {
     $sites = wp_get_sites();
     $lsc = locksite_load_config();
 
-
-
-
+    // Create the table and fill it with data.
     $lock_site_table = new LockSite_Table();
     $lock_site_table_data = array();
     if (count($sites) > 0) {
@@ -74,30 +76,33 @@ function locksite_admin_page() {
             array_push($lock_site_table_data, $tmp);
         }
         $lock_site_table->set_data($lock_site_table_data);
-
     }
-
-
 
     print '<form id="form-table" action="admin.php?page=locksite" method="post">';
     $lock_site_table->prepare_items();
     $lock_site_table->display();
     print '<div class="tablenav bottom">';
     print '<span class="displaying-num">' . count($sites) . ' sites</span>';
-    print '<br class="clear" />';
     print '</div>';
 
-        $wl = locksite_load_whitelist();
-        $whitelist = "";
-        foreach ($wl as $entry) {
-            $whitelist .= $entry . "\n";
-        }
-        print '<h3>Whitelist</h3>';
-        print '<p>IP addresses you add here will have access to your locked sites. Add one IP address per row.</p>';
-        print "<p><textarea rows='10' cols='40' name='whitelist'>{$whitelist}</textarea></p>";
-        print '<input type="hidden" name="page" value="locksite" />';
+    $wl = locksite_load_whitelist();
+    $whitelist = "";
+    foreach ($wl as $entry) {
+        $whitelist .= $entry . "\n";
+    }
+    print '<h3>Whitelist</h3>';
+    print '<p>IP addresses you add here will have access to your locked sites. Add one IP address per row.</p>';
+    print "<p><textarea rows='10' cols='40' name='whitelist'>{$whitelist}</textarea></p>";
+    print '<input type="hidden" name="page" value="locksite" />';
+
+    print '<h3>Action when locked</h3>';
+    print '<p>When a site is locked, show this message:</p>';
+
+    $lock_message = locksite_load_message();
+    wp_editor($lock_message, "locksite_message", array('textarea_rows'=>12, 'editor_class'=>'locksite_message_class', 'media_buttons' => false));
+
     wp_nonce_field('locksite_update_settings');
-        print '<p><input type="submit" class="button apply" name="submit_me" value="Update"/></p>';
+    print '<p><input type="submit" class="button apply" name="submit_me" value="Update"/></p>';
     print '</form>';
 
     print '</div>';
@@ -120,7 +125,12 @@ function locksite_check_lock() {
         return true;
     }
     if (in_array($blog_id, locksite_load_config())) {
-        wp_die('<h2>Site is locked</h2><p>This site is locked. Go away.</p>');
+        $message = locksite_load_message();
+        if ($message == false) {
+            wp_die('<h2>Site is locked</h2><p>This site is locked.</p>');
+        } else {
+            wp_die($message);
+        }
     }
 }
 add_action('plugins_loaded', 'locksite_check_lock');
@@ -130,6 +140,24 @@ function locksite_notify_update($message) {
     echo '<div class="updated"><p>' . $message . '</p></div>';
 }
 
+function locksite_load_message() {
+    $message = get_site_option('locksite_message', false);
+    if ($message != false) {
+        return unserialize($message);
+    } else {
+        return false;
+    }
+}
+
+function locksite_save_message($message) {
+    $msg = locksite_load_message();
+    $message = serialize($message);
+    if ($msg == false) {
+        add_site_option('locksite_message', $message);
+    } else {
+        update_site_option('locksite_message', $message);
+    }
+}
 
 function locksite_load_whitelist() {
     $wl = get_site_option('locksite_whitelist', false);
